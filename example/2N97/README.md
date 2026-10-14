@@ -42,9 +42,9 @@ example/2N97/
 
 Run commands from the repository root after `conda activate dist-af`.
 
-1. Generate start structures with the command and options in [Step 2](../../README.md#step-2-generate-start-structures). Use `example/2N97/input/` as the input and `example/2N97/output/start_structures/` as the output directory.
-2. Follow [Step 3](../../README.md#step-3-refine-directly-from-afm-and-from-every-start-structure) to run one refinement directly from AFM and one with each generated start structure. Use the same input model, embedding, constraints, and domain windows, and a separate output directory for each run.
-3. Collect every run's `best_checkpoint/2N97_best_pred.pdb` and rank the complete set with [FTDMP](https://github.com/kliment-olechnovic/ftdmp) and [LZerD rank sum](https://lzerd.kiharalab.org/about/howtointerpret/), as described in [Step 4](../../README.md#step-4-rank-the-candidate-models).
+1. Generate start structures with the command and options in [Step 2 (optional)](../../README.md#step-2-optional-generate-start-structures), or use your own template/start structure. For generation, use `example/2N97/input/` as the input and `example/2N97/output/start_structures/` as the output directory.
+2. Follow [Step 3](../../README.md#step-3-refine-directly-from-afm-and-from-every-start-structure) to run one refinement directly from AFM and one with each generated or user-provided start structure. Use the same input model, embedding, constraints, and domain windows, and a separate output directory for each run.
+3. Collect every run's `best_checkpoint/2N97_best_pred.pdb` and rank the complete set with [FTDMP](https://github.com/kliment-olechnovic/ftdmp) and [LZerD rank sum](https://lzerd.kiharalab.org/about/howtointerpret/), as described in [Step 4 (optional)](../../README.md#step-4-optional-rank-the-candidate-models), or use your own ranking method.
 
 For the three supplied start structures, the candidate set consists of the AFM-direct refinement and the three separate start-structure refinements. Include results from any additional starts or independent runs in the same target's candidate set.
 

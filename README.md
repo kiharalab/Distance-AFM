@@ -1,6 +1,8 @@
 # Distance-AF Multimer
 
-Distance-AF Multimer refines AlphaFold-Multimer models of protein complexes with distance constraints between residues. Given an AlphaFold-Multimer model, its embedding, and a set of intra- or inter-chain CA–CA distances, it fine-tunes the structure module on the target. For each target, we run refinement directly from the AlphaFold-Multimer model and separately with each generated start structure. The resulting models form a candidate set for ranking with FTDMP and LZerD rank sum.
+Distance-AF Multimer refines AlphaFold-Multimer models of protein complexes with distance constraints between residues. Given an AlphaFold-Multimer model, its embedding, and a set of intra- or inter-chain CA–CA distances, it fine-tunes the structure module on the target. For each target, we run refinement directly from the AlphaFold-Multimer model and separately with each generated or user-provided start structure. The resulting models form a candidate set for ranking with FTDMP and LZerD rank sum.
+
+**Steps 1, 2, and 4 are optional.** Skip Step 1 if you already have an AlphaFold-Multimer embedding and its matching initial model; skip Step 2 if you have your own template/start structure; skip Step 4 if you use your own ranking method.
 
 Copyright (C) 2026 Kai Ling, Yuanyuan Zhang, Zicong Zhang, Tsukasa Nakamura, Daisuke Kihara, and Purdue University.
 
@@ -23,7 +25,7 @@ For technical problems or questions, please contact Kai Ling (ling59@purdue.edu)
    git clone https://github.com/kiharalab/Distance-AFM.git
    cd Distance-AFM
    ```
-2. Create the two conda environments:
+2. Create the conda environments needed for your steps (`dist-af-embedding` is only needed for Step 1):
    ```
    conda env create -f environment.yml             # dist-af: Step 2 and Step 3
    conda env create -f environment_embedding.yml   # dist-af-embedding: Step 1
@@ -35,14 +37,14 @@ Activate the environment of a step before running it: `conda activate dist-af-em
 
 ## Usage
 
-Distance-AF Multimer runs in **4 steps**. Run the commands below in Bash from the repository root.
+The workflow has **4 steps**, with **Steps 1, 2, and 4 optional**. Run the commands below in Bash from the repository root.
 
 | Step | What it does | Script | Environment | Output used later |
 |---|---|---|---|---|
-| 1 | Runs AlphaFold-Multimer to get the embedding and the initial model | `run_alphafold_v3_msa.py`, `run_alphafold_v3.py` | `dist-af-embedding` | `result_model_1_multimer_v2_pred_0.pkl`, `unrelaxed_model_1_multimer_v2_pred_0.pdb` |
-| 2 | Generates start structures by re-docking the chains using the distance constraints | `train_utils/generate_start_structures.py` | `dist-af` | `<TARGET>_start_0.pdb`, `<TARGET>_start_1.pdb`, ... |
+| 1 (optional) | Runs AlphaFold-Multimer to get the embedding and the initial model | `run_alphafold_v3_msa.py`, `run_alphafold_v3.py` | `dist-af-embedding` | `result_model_1_multimer_v2_pred_0.pkl`, `unrelaxed_model_1_multimer_v2_pred_0.pdb` |
+| 2 (optional) | Generates start structures by re-docking the chains using the distance constraints | `train_utils/generate_start_structures.py` | `dist-af` | `<TARGET>_start_0.pdb`, `<TARGET>_start_1.pdb`, ... |
 | 3 | Runs independent refinements directly from AFM and with every start structure | `main.py` | `dist-af` | One `best_checkpoint/<TARGET>_best_pred.pdb` per run |
-| 4 | Ranks all refined candidates for the target | FTDMP + LZerD rank sum | See the linked tools in Step 4 | Ranked candidate models |
+| 4 (optional) | Ranks all refined candidates for the target | FTDMP + LZerD rank sum | See the linked tools in Step 4 | Ranked candidate models |
 
 `example/2N97` contains example inputs, a recorded start-structure run, and a separate [best result](example/2N97/best_result/2N97_best_pred.pdb); see the [example guide](example/2N97/README.md).
 
@@ -61,7 +63,7 @@ Distance-AF Multimer runs in **4 steps**. Run the commands below in Bash from th
    99,196
    ```
 
-### Step 1: Generate the AlphaFold-Multimer embedding and the initial model
+### Step 1 (optional): Generate the AlphaFold-Multimer embedding and the initial model
 This step runs AlphaFold-Multimer v2.2 in the `dist-af-embedding` environment. `run_alphafold_v3_msa.py` runs the MSA and template search on the CPU and writes `features.pkl`; `run_alphafold_v3.py` reads `features.pkl`, runs AlphaFold-Multimer on the GPU and saves the embedding.
 ```
 conda activate dist-af-embedding
@@ -95,7 +97,7 @@ CUDA_VISIBLE_DEVICES=0 python run_alphafold_v3.py $AF_FLAGS
    + `unrelaxed_model_1_multimer_v2_pred_0.pdb`: the initial model, used as `--pdb_file` in Step 2 and as `--initial_pdb` in Step 3.
  + AlphaFold also writes the results of `model_2` to `model_5`; Distance-AF Multimer uses `model_1`, prediction 0.
 
-### Step 2: Generate start structures
+### Step 2 (optional): Generate start structures
 The commands below use the Step 1 output included in `example/2N97/input/`. The generator repositions and rotates chains using the distance constraints and writes candidate start structures. A native or experimental structure is not required.
 ```bash
 conda activate dist-af
@@ -133,7 +135,7 @@ python train_utils/generate_start_structures.py \
 Use a separate output directory for each generation setting. If `--output_rotation_pdbs` is enabled, the additional rotation PDBs can also be used as `--start_pdb`, with a distinct refinement output directory for each one.
 
 ### Step 3: Refine directly from AFM and from every start structure
-Each target has multiple independent refinement runs: one directly from the AFM model, plus one for each generated start structure. All runs use the same AFM reference model, embedding, distance constraints, and domain windows. Give every run its own output directory.
+Each target has multiple independent refinement runs: one directly from the AFM model, plus one for each generated or user-provided start structure. All runs use the same AFM reference model, embedding, distance constraints, and domain windows. Give every run its own output directory.
 
 Define the shared arguments:
 ```bash
@@ -173,11 +175,13 @@ done
 ```
 These commands run sequentially on the selected GPU. If Step 2 used a different output directory, change the loop's start-structure directory accordingly. Repeat Step 3b for any additional rotation variants you choose to refine.
 
+If you skip Step 2, pass your own template/start structure's PDB path as `--start_pdb` in Step 3b, keeping the matching AFM model as `--initial_pdb`.
+
 | Option | Default | Description |
 |---|---|---|
 | `--target_file` | required | Target file |
-| `--emd_file` | required | Embedding from Step 1 (`result_model_1_multimer_v2_pred_0.pkl`) |
-| `--initial_pdb` | required | Initial model from Step 1 (`unrelaxed_model_1_multimer_v2_pred_0.pdb`) |
+| `--emd_file` | required | Existing embedding or output from Step 1 (`result_model_1_multimer_v2_pred_0.pkl`) |
+| `--initial_pdb` | required | Matching AFM model, supplied by you or generated in Step 1 (`unrelaxed_model_1_multimer_v2_pred_0.pdb`) |
 | `--dist_info` | required | Distance constraint file |
 | `--window_info` | required | Domain window file |
 | `--output_dir` | `./example_output` | Results are written to `<output_dir>/<target name>/` |
@@ -187,7 +191,7 @@ These commands run sequentially on the selected GPU. If Step 2 used a different 
 | `--dist_weight` | 0.5 | Weight of the distance loss; larger values penalize violations more |
 | `--loose_dist` | 1 | Lower the weight of the distance loss once the constraints are roughly satisfied |
 | `--dist_range` | 0 | 1: the constraint file gives lower and upper bounds instead of distances |
-| `--start_pdb` | None | Start structure from Step 2 |
+| `--start_pdb` | None | Your own template/start structure or one generated in Step 2 |
 | `--coarse_tuning_epochs` | 3000 | Number of coarse tuning epochs, trained towards the start structure |
 | `--weight_file` | None | Weight file to load instead of `model_dir/multimer/model_state_dict.pt` |
 | `--model_dir` | None | Resume from a checkpoint directory |
@@ -213,7 +217,7 @@ These commands run sequentially on the selected GPU. If Step 2 used a different 
  + Each checkpoint directory stores the full model and optimizer state (about 160 MB), so choose `--val_epochs` with disk space in mind.
  + The constraint and window files are cached as `<target name>_constraint*.pt` and `<target name>_domain_window.pt` in the output directory and reused when present, so use a new `--output_dir` when you change the constraint or window file.
 
-### Step 4: Rank the candidate models
+### Step 4 (optional): Rank the candidate models
 Collect `best_checkpoint/<TARGET>_best_pred.pdb` from **every refinement run for the same target**, including the AFM-direct run and all runs with different start structures. Each run contributes one candidate; keep distinct file names when collecting them.
 
 Rank this complete candidate set using [FTDMP](https://github.com/kliment-olechnovic/ftdmp) together with [LZerD rank sum](https://lzerd.kiharalab.org/about/howtointerpret/). See their official pages for usage.
