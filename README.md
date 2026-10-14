@@ -1,5 +1,11 @@
 # Distance-AF Multimer
 
+[![Distance-AFM v1.0.0](https://img.shields.io/badge/Distance--AFM-v1.0.0-green)](https://github.com/kiharalab/Distance-AFM/releases/tag/v1.0.0)
+[![Platform: Linux](https://img.shields.io/badge/platform-Linux-green)](#requirements)
+[![Language: Python 3](https://img.shields.io/badge/Language-Python%203-green)](https://www.python.org/)
+[![Dependencies: conda](https://img.shields.io/badge/dependencies-conda-green)](environment.yml)
+[![License: GPL v3](https://img.shields.io/badge/license-GPL%20v3-green)](LICENSE)
+
 Distance-AF Multimer refines AlphaFold-Multimer models of protein complexes with distance constraints between residues. Given an AlphaFold-Multimer model, its embedding, and a set of intra- or inter-chain CA–CA distances, it fine-tunes the structure module on the target. For each target, we run refinement directly from the AlphaFold-Multimer model and separately with each generated or user-provided start structure. The resulting models form a candidate set for ranking with FTDMP and LZerD rank sum.
 
 **Steps 1, 2, and 4 are optional.** Skip Step 1 if you already have an AlphaFold-Multimer embedding and its matching initial model; skip Step 2 if you have your own template/start structure; skip Step 4 if you use your own ranking method.
