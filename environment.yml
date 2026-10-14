@@ -1,0 +1,33 @@
+name: dist-af
+channels:
+  - pytorch
+  - nvidia
+  - defaults
+  - conda-forge
+  - schrodinger 
+dependencies:
+  - cudatoolkit=11.1.74
+  - libgcc-ng=9.3.0
+  - python=3.9.6
+  - pytorch=1.9.0
+  - pyyaml=5.4.1
+  - readline=8.1
+  - requests=2.26.0
+  - setuptools=52.0.0
+  - tqdm=4.62.2
+  - typing-extensions=3.10.0.0
+  - pymol-open-source=2.5.0
+  - pip
+  - pip:
+      - --find-links https://storage.googleapis.com/jax-releases/jax_releases.html
+      - absl-py==1.4.0
+      - biopython==1.79
+      - dm-tree==0.1.6
+      - einops==0.8.0
+      - modelcif==0.9
+      - jax==0.4.8
+      - jaxlib==0.4.7
+      - ml-collections==0.1.0
+      - numpy==1.23.5
+      - pip==23.0.1
+      - scipy==1.11.1
