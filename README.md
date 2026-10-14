@@ -1,6 +1,6 @@
 # Distance-AF Multimer
 
-Distance-AF Multimer refines AlphaFold-Multimer models of protein complexes with distance constraints between residues. Given an AlphaFold-Multimer model, its embedding, and a set of intra- or inter-chain CA–CA distances, it fine-tunes the structure module on the target. For each target, we run refinement directly from the AlphaFold-Multimer model and separately with each generated start structure. The resulting models form a candidate set for ranking with FT-DMP and LZerD rank sum.
+Distance-AF Multimer refines AlphaFold-Multimer models of protein complexes with distance constraints between residues. Given an AlphaFold-Multimer model, its embedding, and a set of intra- or inter-chain CA–CA distances, it fine-tunes the structure module on the target. For each target, we run refinement directly from the AlphaFold-Multimer model and separately with each generated start structure. The resulting models form a candidate set for ranking with FTDMP and LZerD rank sum.
 
 Copyright (C) 2026 Kai Ling, Yuanyuan Zhang, Zicong Zhang, Tsukasa Nakamura, Daisuke Kihara, and Purdue University.
 
@@ -42,7 +42,7 @@ Distance-AF Multimer runs in **4 steps**. Run the commands below in Bash from th
 | 1 | Runs AlphaFold-Multimer to get the embedding and the initial model | `run_alphafold_v3_msa.py`, `run_alphafold_v3.py` | `dist-af-embedding` | `result_model_1_multimer_v2_pred_0.pkl`, `unrelaxed_model_1_multimer_v2_pred_0.pdb` |
 | 2 | Generates start structures by re-docking the chains using the distance constraints | `train_utils/generate_start_structures.py` | `dist-af` | `<TARGET>_start_0.pdb`, `<TARGET>_start_1.pdb`, ... |
 | 3 | Runs independent refinements directly from AFM and with every start structure | `main.py` | `dist-af` | One `best_checkpoint/<TARGET>_best_pred.pdb` per run |
-| 4 | Ranks all refined candidates for the target | FT-DMP + LZerD rank sum | See the linked tools in Step 4 | Ranked candidate models |
+| 4 | Ranks all refined candidates for the target | FTDMP + LZerD rank sum | See the linked tools in Step 4 | Ranked candidate models |
 
 `example/2N97` contains example inputs, a recorded start-structure run, and a separate [best result](example/2N97/best_result/2N97_best_pred.pdb); see the [example guide](example/2N97/README.md).
 
@@ -216,7 +216,7 @@ These commands run sequentially on the selected GPU. If Step 2 used a different 
 ### Step 4: Rank the candidate models
 Collect `best_checkpoint/<TARGET>_best_pred.pdb` from **every refinement run for the same target**, including the AFM-direct run and all runs with different start structures. Each run contributes one candidate; keep distinct file names when collecting them.
 
-Rank this complete candidate set using [FT-DMP](https://github.com/kliment-olechnovic/ftdmp) together with [LZerD rank sum](https://lzerd.kiharalab.org/about/howtointerpret/). See their official pages for usage.
+Rank this complete candidate set using [FTDMP](https://github.com/kliment-olechnovic/ftdmp) together with [LZerD rank sum](https://lzerd.kiharalab.org/about/howtointerpret/). See their official pages for usage.
 
 ## Example
 The [2N97 example guide](example/2N97/README.md) describes the supplied inputs, recorded run, and separate [best result](example/2N97/best_result/2N97_best_pred.pdb). The best result comes from refinement directly from AFM, without a generated start structure. Step 1 outputs are included, so you can begin with Step 2 and run both refinement routes in Step 3 before ranking all candidates in Step 4.
