@@ -1,6 +1,6 @@
 # Distance-AF Multimer
 
-Distance-AF Multimer refines AlphaFold-Multimer models of protein complexes with distance constraints between residues. Given an AlphaFold-Multimer model, its embedding, and a set of intra- or inter-chain CA–CA distances, it fine-tunes the structure module on the target until the predicted complex satisfies the constraints. Optionally, a start structure in which the chains are re-docked to agree with the constraints guides the first (coarse tuning) phase of the refinement.
+Distance-AF Multimer refines AlphaFold-Multimer models of protein complexes with distance constraints between residues. Given an AlphaFold-Multimer model, its embedding, and a set of intra- or inter-chain CA–CA distances, it fine-tunes the structure module on the target. For each target, we run refinement directly from the AlphaFold-Multimer model and separately with each generated start structure. The resulting models form a candidate set for ranking with FT-DMP and LZerD rank sum.
 
 Copyright (C) 2026 Kai Ling, Yuanyuan Zhang, Zicong Zhang, Tsukasa Nakamura, Daisuke Kihara, and Purdue University.
 
@@ -35,15 +35,16 @@ Activate the environment of a step before running it: `conda activate dist-af-em
 
 ## Usage
 
-Distance-AF Multimer runs in **3 steps**. Run all commands from the repository root.
+Distance-AF Multimer runs in **4 steps**. Run the commands below in Bash from the repository root.
 
 | Step | What it does | Script | Environment | Output used later |
 |---|---|---|---|---|
 | 1 | Runs AlphaFold-Multimer to get the embedding and the initial model | `run_alphafold_v3_msa.py`, `run_alphafold_v3.py` | `dist-af-embedding` | `result_model_1_multimer_v2_pred_0.pkl`, `unrelaxed_model_1_multimer_v2_pred_0.pdb` |
-| 2 | (Optional, recommended) Generates start structure candidates by re-docking the chains of the initial model so that they agree with the distance constraints | `train_utils/generate_start_structures.py` | `dist-af` | `<TARGET>_start_0.pdb` |
-| 3 | Refines the initial model with the distance constraints | `main.py` | `dist-af` | `best_checkpoint/<TARGET>_best_pred.pdb` |
+| 2 | Generates start structures by re-docking the chains using the distance constraints | `train_utils/generate_start_structures.py` | `dist-af` | `<TARGET>_start_0.pdb`, `<TARGET>_start_1.pdb`, ... |
+| 3 | Runs independent refinements directly from AFM and with every start structure | `main.py` | `dist-af` | One `best_checkpoint/<TARGET>_best_pred.pdb` per run |
+| 4 | Ranks all refined candidates for the target | FT-DMP + LZerD rank sum | See the linked tools in Step 4 | Ranked candidate models |
 
-`example/2N97` contains the input and the expected output of a small test case; see [Example](#example).
+`example/2N97` contains example inputs, a recorded start-structure run, and a separate [best result](example/2N97/best_result/2N97_best_pred.pdb); see the [example guide](example/2N97/README.md).
 
 ### Input files
  + **FASTA file** (Step 1): one entry per chain, for example `example/2N97/input/2N97.fasta`.
@@ -94,9 +95,9 @@ CUDA_VISIBLE_DEVICES=0 python run_alphafold_v3.py $AF_FLAGS
    + `unrelaxed_model_1_multimer_v2_pred_0.pdb`: the initial model, used as `--pdb_file` in Step 2 and as `--initial_pdb` in Step 3.
  + AlphaFold also writes the results of `model_2` to `model_5`; Distance-AF Multimer uses `model_1`, prediction 0.
 
-### Step 2: Generate start structures (optional)
-The example commands of Step 2 and Step 3 use the Step 1 output that is included in `example/2N97/input/`.
-```
+### Step 2: Generate start structures
+The commands below use the Step 1 output included in `example/2N97/input/`. The generator repositions and rotates chains using the distance constraints and writes candidate start structures. A native or experimental structure is not required.
+```bash
 conda activate dist-af
 python train_utils/generate_start_structures.py \
   --target=2N97 \
@@ -112,31 +113,65 @@ python train_utils/generate_start_structures.py \
 | `--dist_constraints_file` | Distance constraint file |
 | `--output_dir` | Directory for the start structures |
 | `--search_step_degree` | Rotation search step in degrees (default: 30) |
-| `--candidates_per_iteration` | Number of candidates kept in each iteration (default: 3) |
+| `--candidates_per_iteration` | Number of candidates kept at each chain-assembly iteration (default: 3) |
 | `--use_multiple_constraints` | Use the 3 shortest constraints instead of only the shortest one |
 | `--no_translation` | Only rotate the chains |
 | `--output_rotation_pdbs` | Also write additional rotation variants |
 
-The start structure candidates are written as `<TARGET>_start_0.pdb`, `<TARGET>_start_1.pdb`, ...; `<TARGET>_start_0.pdb` is used as `--start_pdb` in Step 3.
+The generated structures are written as `<TARGET>_start_0.pdb`, `<TARGET>_start_1.pdb`, ... in `--output_dir`. The number of structures depends on the target and the available orientations. Use every generated start structure in a separate Step 3 run. Keep the original AFM model as `--initial_pdb`; pass the generated structure as `--start_pdb`.
 
-### Step 3: Refine the model with Distance-AF Multimer
+For a finer rotation search or more candidates, set `--search_step_degree` and `--candidates_per_iteration`, for example:
+```bash
+python train_utils/generate_start_structures.py \
+  --target=2N97 \
+  --pdb_file=example/2N97/input/unrelaxed_model_1_multimer_v2_pred_0.pdb \
+  --dist_constraints_file=example/2N97/input/dist_constraint.txt \
+  --search_step_degree=15 \
+  --candidates_per_iteration=5 \
+  --output_dir=example/2N97/output/start_structures_fine
 ```
+Use a separate output directory for each generation setting. If `--output_rotation_pdbs` is enabled, the additional rotation PDBs can also be used as `--start_pdb`, with a distinct refinement output directory for each one.
+
+### Step 3: Refine directly from AFM and from every start structure
+Each target has multiple independent refinement runs: one directly from the AFM model, plus one for each generated start structure. All runs use the same AFM reference model, embedding, distance constraints, and domain windows. Give every run its own output directory.
+
+Define the shared arguments:
+```bash
 conda activate dist-af
-python main.py \
-  --target_file=example/2N97/input/2N97 \
-  --emd_file=example/2N97/input/result_model_1_multimer_v2_pred_0.pkl \
-  --initial_pdb=example/2N97/input/unrelaxed_model_1_multimer_v2_pred_0.pdb \
-  --dist_info=example/2N97/input/dist_constraint.txt \
-  --window_info=example/2N97/input/window.txt \
-  --start_pdb=example/2N97/output/start_structures/2N97_start_0.pdb \
-  --coarse_tuning_epochs=3000 \
-  --output_dir=example/2N97/output \
-  --config_preset=model_1_multimer_v3 \
-  --dist_weight=0.5 --loose_dist=1 \
-  --epochs=20000 --val_epochs=1000 \
+TARGET=2N97
+INPUT_DIR=example/2N97/input
+OUTPUT_DIR=example/2N97/output
+COMMON_ARGS=(
+  --target_file="$INPUT_DIR/$TARGET"
+  --emd_file="$INPUT_DIR/result_model_1_multimer_v2_pred_0.pkl"
+  --initial_pdb="$INPUT_DIR/unrelaxed_model_1_multimer_v2_pred_0.pdb"
+  --dist_info="$INPUT_DIR/dist_constraint.txt"
+  --window_info="$INPUT_DIR/window.txt"
+  --config_preset=model_1_multimer_v3
+  --dist_weight=0.5 --loose_dist=1
+  --epochs=20000 --val_epochs=1000
   --device_id=0
+)
 ```
-Leave out `--start_pdb` and `--coarse_tuning_epochs` to run without a start structure.
+
+**3a. Refine directly from AFM**, without `--start_pdb`:
+```bash
+python main.py "${COMMON_ARGS[@]}" \
+  --output_dir="$OUTPUT_DIR/runs/afm_direct"
+```
+
+**3b. Refine with each generated start structure**:
+```bash
+for start_pdb in "$OUTPUT_DIR"/start_structures/"${TARGET}"_start_*.pdb; do
+  [ -f "$start_pdb" ] || continue
+  run_name=$(basename "$start_pdb" .pdb)
+  python main.py "${COMMON_ARGS[@]}" \
+    --start_pdb="$start_pdb" \
+    --coarse_tuning_epochs=3000 \
+    --output_dir="$OUTPUT_DIR/runs/$run_name"
+done
+```
+These commands run sequentially on the selected GPU. If Step 2 used a different output directory, change the loop's start-structure directory accordingly. Repeat Step 3b for any additional rotation variants you choose to refine.
 
 | Option | Default | Description |
 |---|---|---|
@@ -165,7 +200,7 @@ Leave out `--start_pdb` and `--coarse_tuning_epochs` to run without a start stru
 ```
 <output_dir>/<target name>/
 ├── best_checkpoint/
-│   ├── <target name>_best_pred.pdb    # final model: the epoch with the lowest (moving-average) loss
+│   ├── <target name>_best_pred.pdb    # candidate from this run: the lowest moving-average loss
 │   ├── best_results.txt               # best epoch, loss, and RMSD to the initial model
 │   └── best_checkpoint.pth, model_state_dict.pt, optimizer.pt
 ├── checkpoint-<E>-<E>/                # every --val_epochs epochs
@@ -178,34 +213,10 @@ Leave out `--start_pdb` and `--coarse_tuning_epochs` to run without a start stru
  + Each checkpoint directory stores the full model and optimizer state (about 160 MB), so choose `--val_epochs` with disk space in mind.
  + The constraint and window files are cached as `<target name>_constraint*.pt` and `<target name>_domain_window.pt` in the output directory and reused when present, so use a new `--output_dir` when you change the constraint or window file.
 
+### Step 4: Rank the candidate models
+Collect `best_checkpoint/<TARGET>_best_pred.pdb` from **every refinement run for the same target**, including the AFM-direct run and all runs with different start structures. Each run contributes one candidate; keep distinct file names when collecting them.
+
+Rank this complete candidate set using [FT-DMP](https://github.com/kliment-olechnovic/ftdmp) together with [LZerD rank sum](https://lzerd.kiharalab.org/about/howtointerpret/). See their official pages for usage.
+
 ## Example
-`example/2N97` is a homodimer (2 × 98 residues) with 12 distance constraints. The Step 1 output is included in `input/`, so the example starts from Step 2; `expected_output/` contains our results.
-```
-example/2N97/
-├── input/
-│   ├── 2N97.fasta                                 # Step 1 input
-│   ├── 2N97                                       # target file
-│   ├── dist_constraint.txt                        # 12 distance constraints
-│   ├── window.txt                                 # one domain per chain
-│   ├── result_model_1_multimer_v2_pred_0.pkl      # Step 1 output (only the representations used by Distance-AF Multimer)
-│   └── unrelaxed_model_1_multimer_v2_pred_0.pdb   # Step 1 output (initial model)
-└── expected_output/
-    ├── start_structures/                          # Step 2 output
-    │   └── 2N97_start_0.pdb, 2N97_start_1.pdb, 2N97_start_2.pdb
-    └── 2N97/                                      # Step 3 output
-        ├── best_checkpoint/2N97_best_pred.pdb
-        ├── best_checkpoint/best_results.txt
-        ├── loss_log.txt
-        └── DONE.out
-```
-Run Step 2 and Step 3:
-```
-conda activate dist-af
-python train_utils/generate_start_structures.py --target=2N97 --pdb_file=example/2N97/input/unrelaxed_model_1_multimer_v2_pred_0.pdb --dist_constraints_file=example/2N97/input/dist_constraint.txt --output_dir=example/2N97/output/start_structures
-python main.py --target_file=example/2N97/input/2N97 --emd_file=example/2N97/input/result_model_1_multimer_v2_pred_0.pkl --dist_info=example/2N97/input/dist_constraint.txt --window_info=example/2N97/input/window.txt --initial_pdb=example/2N97/input/unrelaxed_model_1_multimer_v2_pred_0.pdb --start_pdb=example/2N97/output/start_structures/2N97_start_0.pdb --coarse_tuning_epochs=3000 --output_dir=example/2N97/output --config_preset=model_1_multimer_v3 --dist_weight=0.5 --loose_dist=1 --epochs=20000 --val_epochs=1000 --device_id=0
-```
-Expected results (NVIDIA RTX 6000 Ada; other GPUs can give slightly different numbers in Step 3):
- + Step 2 takes about 2 minutes on one CPU core and writes the same start structures as `expected_output/start_structures/`.
- + Step 3 takes about 80 minutes (20000 epochs) and uses about 2.3 GB of GPU memory. The best model is saved at epoch 6230 with loss 3.79 (`best_checkpoint/best_results.txt`).
- + The initial model deviates from the 12 distance constraints by 4.62 Å on average (at most 10.28 Å); `2N97_best_pred.pdb` satisfies all 12 constraints within 0.4 Å.
- + Compared with the experimental structure (PDB 2N97), DockQ improves from 0.25 for the initial model to 0.66 for `2N97_best_pred.pdb`.
+The [2N97 example guide](example/2N97/README.md) describes the supplied inputs, recorded run, and separate [best result](example/2N97/best_result/2N97_best_pred.pdb). The best result comes from refinement directly from AFM, without a generated start structure. Step 1 outputs are included, so you can begin with Step 2 and run both refinement routes in Step 3 before ranking all candidates in Step 4.
