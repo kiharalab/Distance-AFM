@@ -5,6 +5,7 @@
 [![Language: Python 3](https://img.shields.io/badge/Language-Python%203-green)](https://www.python.org/)
 [![Dependencies: conda](https://img.shields.io/badge/dependencies-conda-green)](environment.yml)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL%20v3-green)](LICENSE)
+[![bioRxiv: 2026.10.14.759232](https://img.shields.io/badge/bioRxiv-2026.10.14.759232-green)](https://www.biorxiv.org/content/10.64898/2026.10.14.759232v1)
 
 Distance-AF Multimer refines AlphaFold-Multimer models of protein complexes with distance constraints between residues. Given an AlphaFold-Multimer model, its embedding, and a set of intra- or inter-chain CA–CA distances, it fine-tunes the structure module on the target. For each target, we run refinement directly from the AlphaFold-Multimer model and separately with each generated or user-provided start structure. The resulting models form a candidate set for ranking with FTDMP and LZerD rank sum.
 
@@ -13,6 +14,8 @@ Distance-AF Multimer refines AlphaFold-Multimer models of protein complexes with
 Copyright (C) 2026 Kai Ling, Yuanyuan Zhang, Zicong Zhang, Tsukasa Nakamura, Daisuke Kihara, and Purdue University.
 
 License: GPL v3 (see [LICENSE](LICENSE)). Please contact us if you are interested in a different license, for example for commercial use.
+
+Citation: Kai Ling, Yuanyuan Zhang, Zicong Zhang, Tsukasa Nakamura, and Daisuke Kihara. Distance-AF Multimer: A Multi-Step Approach for Protein Complex Structure Modeling with User-Defined Distance Constraints. bioRxiv (2026). [https://doi.org/10.64898/2026.10.14.759232](https://doi.org/10.64898/2026.10.14.759232); see [Citation](#citation) for BibTeX.
 
 Contact: Daisuke Kihara (dkihara@purdue.edu)
 
@@ -230,3 +233,20 @@ Rank this complete candidate set using [FTDMP](https://github.com/kliment-olechn
 
 ## Example
 The [2N97 example guide](example/2N97/README.md) describes the supplied inputs, recorded run, and separate [best result](example/2N97/best_result/2N97_best_pred.pdb). The best result comes from refinement directly from AFM, without a generated start structure. Step 1 outputs are included, so you can begin with Step 2 and run both refinement routes in Step 3 before ranking all candidates in Step 4.
+
+## Citation
+If you use Distance-AF Multimer, please cite:
+
+Kai Ling, Yuanyuan Zhang, Zicong Zhang, Tsukasa Nakamura, and Daisuke Kihara. Distance-AF Multimer: A Multi-Step Approach for Protein Complex Structure Modeling with User-Defined Distance Constraints. bioRxiv (2026). [https://doi.org/10.64898/2026.10.14.759232](https://doi.org/10.64898/2026.10.14.759232)
+
+```bibtex
+@article{ling2026distanceafmultimer,
+  title     = {Distance-AF Multimer: A Multi-Step Approach for Protein Complex Structure Modeling with User-Defined Distance Constraints},
+  author    = {Ling, Kai and Zhang, Yuanyuan and Zhang, Zicong and Nakamura, Tsukasa and Kihara, Daisuke},
+  journal   = {bioRxiv},
+  year      = {2026},
+  doi       = {10.64898/2026.10.14.759232},
+  url       = {https://www.biorxiv.org/content/10.64898/2026.10.14.759232v1},
+  publisher = {Cold Spring Harbor Laboratory}
+}
+```

@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: "If you use Distance-AF Multimer, please cite our preprint."
+title: "Distance-AF Multimer"
+type: software
+authors:
+  - family-names: Ling
+    given-names: Kai
+  - family-names: Zhang
+    given-names: Yuanyuan
+  - family-names: Zhang
+    given-names: Zicong
+  - family-names: Nakamura
+    given-names: Tsukasa
+  - family-names: Kihara
+    given-names: Daisuke
+repository-code: "https://github.com/kiharalab/Distance-AFM"
+license: GPL-3.0-only
+version: 1.0.0
+date-released: 2026-10-14
+preferred-citation:
+  type: article
+  title: "Distance-AF Multimer: A Multi-Step Approach for Protein Complex Structure Modeling with User-Defined Distance Constraints"
+  authors:
+    - family-names: Ling
+      given-names: Kai
+    - family-names: Zhang
+      given-names: Yuanyuan
+    - family-names: Zhang
+      given-names: Zicong
+    - family-names: Nakamura
+      given-names: Tsukasa
+    - family-names: Kihara
+      given-names: Daisuke
+  journal: bioRxiv
+  year: 2026
+  month: 10
+  doi: "10.64898/2026.10.14.759232"
+  url: "https://www.biorxiv.org/content/10.64898/2026.10.14.759232v1"
