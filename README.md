@@ -246,7 +246,6 @@ Kai Ling, Yuanyuan Zhang, Zicong Zhang, Tsukasa Nakamura, and Daisuke Kihara. Di
   journal   = {bioRxiv},
   year      = {2026},
   doi       = {10.64898/2026.10.14.759232},
-  url       = {https://www.biorxiv.org/content/10.64898/2026.10.14.759232v1},
-  publisher = {Cold Spring Harbor Laboratory}
+  url       = {https://www.biorxiv.org/content/10.64898/2026.10.14.759232v1}
 }
 ```
